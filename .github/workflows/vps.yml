@@ -1,0 +1,40 @@
+name: Ubuntu VPS with Playit Tunnel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-ubuntu-vps:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Update system and install required packages
+      run: |
+        sudo apt update
+        sudo apt install -y openssh-server
+
+    - name: Configure SSH
+      run: |
+        sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+        sudo service ssh start
+        echo "root:p@ssw0rd!" | sudo chpasswd
+        
+    - name: Download and Install Playit
+      run: |
+        wget https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-linux-amd64
+        chmod +x playit-linux-amd64
+        sudo mv playit-linux-amd64 /usr/local/bin/playit
+
+    - name: Start Playit and Set Up SSH Tunnel
+      env:
+        PLAYIT_AUTH_KEY: ${{ secrets.PL }}
+      run: |
+        playit --secret ${{ secrets.PL }} &
+        
+    - name: Keep Action Runner Alive
+      run: |
+        # Keep alive for ~3 hours
+        sleep 10800
