@@ -14,7 +14,7 @@ jobs:
     - name: Update system and install required packages
       run: |
         sudo apt update
-        sudo apt install -y openssh-server
+        sudo apt install -y openssh-server jq curl
 
     - name: Configure SSH
       run: |
@@ -32,7 +32,22 @@ jobs:
       env:
         PLAYIT_AUTH_KEY: ${{ secrets.PL }}
       run: |
-        playit --secret ${{ secrets.PL }} &
+        # Start playit in background and redirect output to a file
+        playit --secret ${{ secrets.PL }} > playit.log 2>&1 &
+        
+        # Wait for tunnel to be established
+        sleep 30
+        
+        # Extract SSH tunnel details
+        echo "::notice::🔐 SSH Access Details:"
+        echo "::notice::━━━━━━━━━━━━━━━━━━━━━━"
+        echo "::notice::👤 Username: root"
+        echo "::notice::🔑 Password: p@ssw0rd!"
+        
+        # Get and display the SSH address
+        TUNNEL_ADDRESS=$(curl -s http://localhost:33182/api/tunnels | jq -r '.tunnels[] | select(.proto=="tcp" and .dst_port==22) | "\(.addr):\(.port)"')
+        echo "::notice::🌐 SSH Command: ssh root@$TUNNEL_ADDRESS"
+        echo "::notice::━━━━━━━━━━━━━━━━━━━━━━"
         
     - name: Keep Action Runner Alive
       run: |
